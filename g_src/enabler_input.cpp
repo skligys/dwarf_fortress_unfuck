@@ -7,7 +7,7 @@
 #include <math.h>
 using namespace std;
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #include "enabler_input.h"
 #include "init.h"

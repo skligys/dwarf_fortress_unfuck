@@ -4,7 +4,7 @@
 
 #include "resize++.h"
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 //code adapted by David Olsen from Lanczos filtering article on wikipedia.org
 

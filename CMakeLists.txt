@@ -5,10 +5,13 @@ set(CMAKE_BUILD_TYPE Release)
 
 add_definitions(-Dunix -Dlinux -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0)
 
+cmake_policy(SET CMP0060 NEW)
+cmake_policy(SET CMP0072 NEW)
 find_package(OpenGL REQUIRED)
-find_package(SDL REQUIRED)
-find_package(SDL_image REQUIRED)
-find_package(SDL_ttf REQUIRED)
+find_package(SDL2 REQUIRED)
+INCLUDE(FindPkgConfig)
+PKG_SEARCH_MODULE(SDL2_IMAGE REQUIRED SDL2_image>=2.0.0)
+PKG_SEARCH_MODULE(SDL2_TTF REQUIRED SDL2_ttf>=2.0.0)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(OpenAL REQUIRED)
@@ -45,9 +48,9 @@ SET(SOURCES
 
 include_directories(
     ${OPENGL_INCLUDE_DIR}
-    ${SDL_INCLUDE_DIR}
-    ${SDL_TTF_INCLUDE_DIRS}
-    ${SDL_IMAGE_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIR}
+    ${SDL2_TTF_INCLUDE_DIRS}
+    ${SDL2_IMAGE_INCLUDE_DIRS}
     ${OPENAL_INCLUDE_DIR}
     ${GLEW_INCLUDE_DIRS}
     ${FREETYPE_INCLUDE_DIRS}
@@ -60,9 +63,9 @@ include_directories(
 add_library(graphics SHARED ${SOURCES})
 target_link_libraries(graphics
     ${OPENGL_LIBRARY}
-    ${SDL_LIBRARY}
-    ${SDL_TTF_LIBRARIES}
-    ${SDL_IMAGE_LIBRARIES}
+    ${SDL2_LIBRARY}
+    ${SDL2_TTF_LIBRARIES}
+    ${SDL2_IMAGE_LIBRARIES}
     ${OPENAL_LIBRARY}
     ${GTK2_LIBRARIES}
     ${GLEW_LIBRARIES}

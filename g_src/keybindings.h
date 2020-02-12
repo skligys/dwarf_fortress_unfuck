@@ -1621,7 +1621,7 @@ enum InterfaceKeyType
 	INTERFACEKEYNUM,
 };
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 extern bimap<InterfaceKey,std::string> bindingNames;
 extern bimap<InterfaceKey,std::string> displayNames;

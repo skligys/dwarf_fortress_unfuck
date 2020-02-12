@@ -13,7 +13,7 @@
 #include "keybindings.h"
 #include "curses.h"
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 typedef Uint32 Time;
 
