@@ -748,7 +748,7 @@ int main (int argc, char* argv[]) {
   enabler.renderer_threadid = SDL_ThreadID();
 
   // Spawn simulation thread
-  SDL_CreateThread(call_loop, NULL);
+  SDL_CreateThread(call_loop, "simulation", NULL);
 
   init.begin(); // Load init.txt settings
   
