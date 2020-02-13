@@ -10,8 +10,9 @@ void report_error(const char*, const char*);
 
 class renderer_2d_base : public renderer {
 protected:
-  SDL_Surface *screen;
-  map<texture_fullid, SDL_Surface*> tile_cache;
+  SDL_Window *window = NULL;
+  SDL_Renderer *renderer = NULL;
+  map<texture_fullid, SDL_Texture*> tile_cache;
   int dispx, dispy, dimx, dimy;
   // We may shrink or enlarge dispx/dispy in response to zoom requests. dispx/y_z are the
   // size we actually display tiles at.
@@ -19,8 +20,8 @@ protected:
   // Viewport origin
   int origin_x, origin_y;
 
-  SDL_Surface *tile_cache_lookup(texture_fullid &id, bool convert=true) {
-    map<texture_fullid, SDL_Surface*>::iterator it = tile_cache.find(id);
+  SDL_Texture *tile_cache_lookup(texture_fullid &id, bool convert=true) {
+    map<texture_fullid, SDL_Texture*>::iterator it = tile_cache.find(id);
     if (it != tile_cache.end()) {
       return it->second;
     } else {
@@ -66,35 +67,47 @@ protected:
       SDL_Surface *disp = convert ?
         SDL_Resize(color, dispx_z, dispy_z) :  // Convert to display format; deletes color
         color;  // color is not deleted, but we don't want it to be.
+      SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, disp);
+      SDL_FreeSurface(disp);
       // Insert and return
-      tile_cache[id] = disp;
-      return disp;
+      tile_cache[id] = texture;
+      return texture;
     }
   }
-  
+
   virtual bool init_video(int w, int h) {
-    // Get ourselves a 2D SDL window
-    Uint32 flags = init.display.flag.has_flag(INIT_DISPLAY_FLAG_2DHW) ? SDL_HWSURFACE : SDL_SWSURFACE;
-    flags |= init.display.flag.has_flag(INIT_DISPLAY_FLAG_2DASYNC) ? SDL_ASYNCBLIT : 0;
+    if (!window || !renderer) {
+      // Get ourselves a 2D SDL window
+      Uint32 flags = 0;
+      // Set it up for windowed or fullscreen, depending.
+      if (enabler.is_fullscreen()) {
+        flags |= SDL_WINDOW_FULLSCREEN;
+      } else {
+        if (!init.display.flag.has_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE))
+          flags |= SDL_WINDOW_RESIZABLE;
+      }
 
-    // Set it up for windowed or fullscreen, depending.
-    if (enabler.is_fullscreen()) { 
-      flags |= SDL_FULLSCREEN;
+      // (Re)create the window
+      int rc = SDL_CreateWindowAndRenderer(w, h, flags, &window, &renderer);
+      bool success = rc == 0 && window != NULL && renderer != NULL;
+      if (!success) {
+        cout << "SDL_CreateWindowAndRenderer FAILED! " << SDL_GetError() << endl;
+        return false;
+      }
     } else {
-      if (!init.display.flag.has_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE))
-        flags |= SDL_RESIZABLE;
+      int rc = SDL_SetWindowFullscreen(window, enabler.is_fullscreen() ? SDL_WINDOW_FULLSCREEN : 0);
+      if (rc != 0) {
+        cout << "SDL_SetWindowFullscreen FAILED! " << SDL_GetError() << endl;
+        return false;
+      }
     }
 
-    // (Re)create the window
-    screen = SDL_SetVideoMode(w, h, 32, flags);
-    if (screen == NULL) cout << "INIT FAILED!" << endl;
-
-    return screen != NULL;
+    return true;
   }
-  
+
 public:
-  list<pair<SDL_Surface*,SDL_Rect> > ttfs_to_render;
-  
+  list<pair<SDL_Texture*,SDL_Rect> > ttfs_to_render;
+
   void update_tile(int x, int y) {
     // Figure out where to blit
     SDL_Rect dst;
@@ -102,11 +115,11 @@ public:
     dst.y = dispy_z * y + origin_y;
     // Read tiles from gps, create cached texture
     Either<texture_fullid,texture_ttfid> id = screen_to_texid(x, y);
-    SDL_Surface *tex;
+    SDL_Texture *tex;
     if (id.isL) {      // Ordinary tile, cached here
       tex = tile_cache_lookup(id.left);
       // And blit.
-      SDL_BlitSurface(tex, NULL, screen, &dst);
+      SDL_RenderCopy(renderer, tex, NULL, &dst);
     } else {  // TTF, cached in ttf_manager so no point in also caching here
       tex = ttf_manager.get_texture(id.right);
       // Blit later
@@ -115,7 +128,7 @@ public:
   }
 
   void update_all() {
-    SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
+    SDL_RenderClear(renderer);
     for (int x = 0; x < gps.dimx; x++)
       for (int y = 0; y < gps.dimy; y++)
         update_tile(x, y);
@@ -124,19 +137,27 @@ public:
   virtual void render() {
     // Render the TTFs, which we left for last
     for (auto it = ttfs_to_render.begin(); it != ttfs_to_render.end(); ++it) {
-      SDL_BlitSurface(it->first, NULL, screen, &it->second);
+      SDL_RenderCopy(renderer, it->first, NULL, &it->second);
     }
     ttfs_to_render.clear();
-    // And flip out.
-    SDL_Flip(screen);
+    // And present changes.
+    SDL_RenderPresent(renderer);
   }
 
   virtual ~renderer_2d_base() {
 	for (auto it = tile_cache.cbegin(); it != tile_cache.cend(); ++it)
-		SDL_FreeSurface(it->second);
+		SDL_DestroyTexture(it->second);
 	for (auto it = ttfs_to_render.cbegin(); it != ttfs_to_render.cend(); ++it)
-		SDL_FreeSurface(it->first);
-  }
+		SDL_DestroyTexture(it->first);
+    if (renderer) {
+      SDL_DestroyRenderer(renderer);
+      renderer = NULL;
+    }
+    if (window) {
+      SDL_DestroyWindow(window);
+      window = NULL;
+    }
+}
 
   void grid_resize(int w, int h) {
     dimx = w; dimy = h;
@@ -221,22 +242,24 @@ public:
   void reshape(pair<int,int> max_grid) {
     int w = max_grid.first,
       h = max_grid.second;
+    int window_w = 0, window_h = 0;
+    SDL_GetWindowSize(window, &window_w, &window_h);
     // Compute the largest tile size that will fit this grid into the window, roughly maintaining aspect ratio
     double try_x = dispx, try_y = dispy;
-    try_x = screen->w / w;
-    try_y = MIN(try_x / dispx * dispy, screen->h / h);
+    try_x = window_w / w;
+    try_y = MIN(try_x / dispx * dispy, window_h / h);
     try_x = MIN(try_x, try_y / dispy * dispx);
     dispx_z = MAX(1,try_x); dispy_z = MAX(try_y,1);
     cout << "Resizing font to " << dispx_z << "x" << dispy_z << endl;
     // Remove now-obsolete tile catalog
-    for (map<texture_fullid, SDL_Surface*>::iterator it = tile_cache.begin();
+    for (map<texture_fullid, SDL_Texture*>::iterator it = tile_cache.begin();
          it != tile_cache.end();
          ++it)
-      SDL_FreeSurface(it->second);
+      SDL_DestroyTexture(it->second);
     tile_cache.clear();
     // Recompute grid based on the new tile size
-    w = CLAMP(screen->w / dispx_z, MIN_GRID_X, MAX_GRID_X);
-    h = CLAMP(screen->h / dispy_z, MIN_GRID_Y, MAX_GRID_Y);
+    w = CLAMP(window_w / dispx_z, MIN_GRID_X, MAX_GRID_X);
+    h = CLAMP(window_h / dispy_z, MIN_GRID_Y, MAX_GRID_Y);
     // Reset grid size
 #ifdef DEBUG
     cout << "Resizing grid to " << w << "x" << h << endl;
@@ -245,8 +268,8 @@ public:
     // Force redisplay
     gps.force_full_display_count = 1;
     // Calculate viewport origin, for centering
-    origin_x = (screen->w - dispx_z * w) / 2;
-    origin_y = (screen->h - dispy_z * h) / 2;
+    origin_x = (window_w - dispx_z * w) / 2;
+    origin_y = (window_h - dispy_z * h) / 2;
     // Reset TTF rendering
     ttf_manager.init(dispy_z, dispx_z);
   }
@@ -255,8 +278,10 @@ private:
   
   void set_fullscreen() {
     if (enabler.is_fullscreen()) {
-      init.display.desired_windowed_width = screen->w;
-      init.display.desired_windowed_height = screen->h;
+      int window_w = 0, window_h = 0;
+      SDL_GetWindowSize(window, &window_w, &window_h);
+      init.display.desired_windowed_width = window_w;
+      init.display.desired_windowed_height = window_h;
       resize(init.display.desired_fullscreen_width,
              init.display.desired_fullscreen_height);
     } else {
@@ -301,20 +326,21 @@ class renderer_2d : public renderer_2d_base {
 public:
   renderer_2d() {
     // Set window title/icon.
-    SDL_WM_SetCaption(GAME_TITLE_STRING, NULL);
+    SDL_SetWindowTitle(window, GAME_TITLE_STRING);
     SDL_Surface *icon = IMG_Load("data/art/icon.png");
     if (icon != NULL) {
-      SDL_WM_SetIcon(icon, NULL);
+      SDL_SetWindowIcon(window, icon);
       // The icon's surface doesn't get used past this point.
-      SDL_FreeSurface(icon); 
+      SDL_FreeSurface(icon);
     }
     
     // Find the current desktop resolution if fullscreen resolution is auto
     if (init.display.desired_fullscreen_width  == 0 ||
         init.display.desired_fullscreen_height == 0) {
-      const struct SDL_VideoInfo *info = SDL_GetVideoInfo();
-      init.display.desired_fullscreen_width = info->current_w;
-      init.display.desired_fullscreen_height = info->current_h;
+      SDL_DisplayMode mode;
+      SDL_GetDisplayMode(0, 0, &mode);
+      init.display.desired_fullscreen_width = mode.w;
+      init.display.desired_fullscreen_height = mode.h;
     }
 
     // Initialize our window
@@ -341,6 +367,7 @@ public:
 };
 
 class renderer_offscreen : public renderer_2d_base {
+  SDL_Surface *screen = NULL;
   virtual bool init_video(int, int);
 public:
   virtual ~renderer_offscreen();

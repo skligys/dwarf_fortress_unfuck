@@ -16,7 +16,7 @@ bool ttf_managerst::init(int ceiling, int tile_width) {
   if (font) TTF_CloseFont(font);
   handles.clear();
   for (auto it = textures.cbegin(); it != textures.cend(); ++it)
-    SDL_FreeSurface(it->second);
+    SDL_DestroyTexture(it->second);
   textures.clear();
   this->tile_width = tile_width;
   this->ceiling = ceiling;
@@ -146,7 +146,7 @@ ttf_details ttf_managerst::get_handle(const list<ttf_id> &text, justification ju
   return ret;
 }
 
-SDL_Surface *ttf_managerst::get_texture(int handle) {
+SDL_Texture *ttf_managerst::get_texture(int handle) {
   // Run any outstanding renders
   if (!todo.empty()) {
     vector<Uint16> text_unicode;
@@ -223,13 +223,15 @@ SDL_Surface *ttf_managerst::get_texture(int handle) {
       // cout << " width " << textimg->w << " in box of " << box->w << endl;
 #endif
       SDL_FreeSurface(textimg);
+      SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, textimg_2);
+      SDL_FreeSurface(textimg_2);
       // Store it for later.
-      textures[it->handle] = textimg_2;
+      textures[it->handle] = texture;
     }
     todo.clear();
   }
   // Find the li'l texture
-  SDL_Surface *tex = textures[handle];
+  SDL_Texture *tex = textures[handle];
   if (!tex) {
     cout << "Missing/broken TTF handle: " << handle << endl;
   }
@@ -239,7 +241,7 @@ SDL_Surface *ttf_managerst::get_texture(int handle) {
 void ttf_managerst::gc() {
   // Just delete everything, for now.
   for (auto it = textures.begin(); it != textures.end(); ++it)
-    SDL_FreeSurface(it->second);
+    SDL_DestroyTexture(it->second);
   textures.clear();
   handles.clear();
   todo.clear();

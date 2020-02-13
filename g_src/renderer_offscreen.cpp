@@ -61,20 +61,21 @@ void renderer_offscreen::update_all(int offset_x, int offset_y) {
     for (int y = 0; y < gps.dimy; y++) {
       // Read tiles from gps, create cached texture
       Either<texture_fullid,texture_ttfid> id = screen_to_texid(x, y);
-      SDL_Surface *tex = id.isL ?
+      SDL_Texture *tex = id.isL ?
         tile_cache_lookup(id.left, false) :
         ttf_manager.get_texture(id.right);
       if (id.isL) {
         tex = tile_cache_lookup(id.left);
       } else {
-        tex = enabler.textures.get_texture_data(id.right);
+        SDL_Surface *s = enabler.textures.get_texture_data(id.right);
+        tex = SDL_CreateTextureFromSurface(renderer, s);
       }
       // Figure out where to blit
       SDL_Rect dst;
       dst.x = dispx * (x+offset_x);
       dst.y = dispy * (y+offset_y);
       // And blit.
-      SDL_BlitSurface(tex, NULL, screen, &dst);
+      SDL_RenderCopy(renderer, tex, NULL, &dst);
     }
   }
 }
