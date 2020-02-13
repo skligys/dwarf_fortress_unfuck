@@ -310,14 +310,13 @@ SDL_Surface *canonicalize_format(SDL_Surface *src, bool convert_magenta) {
   fmt.Gmask = 255 << fmt.Gshift;
   fmt.Bmask = 255 << fmt.Bshift;
   fmt.Amask = 255 << fmt.Ashift;
-  fmt.colorkey = 0;
-  fmt.alpha = 255;
 
   if (src->format->Amask == 0 && convert_magenta) { // No alpha
-    SDL_SetColorKey(src, SDL_SRCCOLORKEY,
-		    SDL_MapRGB(src->format, 255, 0, 255));
+    SDL_SetColorKey(src, SDL_TRUE, SDL_MapRGB(src->format, 255, 0, 255));
   }
   SDL_Surface *tgt = SDL_ConvertSurface(src, &fmt, SDL_SWSURFACE);
+  SDL_SetColorKey(tgt, SDL_TRUE, 0);
+  SDL_SetSurfaceAlphaMod(tgt, 255);
   SDL_FreeSurface(src);
   return tgt;
 }
@@ -348,7 +347,7 @@ void textures::load_multi_pdim(const string &filename, long *tex_pos, long dimx,
     exit(1);
   }
   SDL_Surface *src = canonicalize_format(raw, convert_magenta);
-  SDL_SetAlpha(src, 0, 255);
+  SDL_SetSurfaceAlphaMod(src, 255);
   *disp_x = src->w / dimx;
   *disp_y = src->h / dimy;
   long idx = 0;
@@ -359,7 +358,7 @@ void textures::load_multi_pdim(const string &filename, long *tex_pos, long dimx,
 					       src->format->Gmask,
 					       src->format->Bmask,
 					       src->format->Amask);
-      SDL_SetAlpha(tile, 0,255);
+      SDL_SetSurfaceAlphaMod(tile, 255);
       SDL_Rect pos_src;
       pos_src.x = *disp_x * x;
       pos_src.y = *disp_y * y;
