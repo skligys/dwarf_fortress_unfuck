@@ -862,6 +862,7 @@ class renderer {
   virtual void render() = 0;
   virtual void set_fullscreen() {} // Should read from enabler.is_fullscreen()
   virtual void zoom(zoom_commands cmd) {};
+  // Negative w or h means get the size from the window.
   virtual void resize(int w, int h) = 0;
   virtual void grid_resize(int w, int h) = 0;
   void swap_arrays();

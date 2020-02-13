@@ -404,12 +404,11 @@ void enablerst::eventLoop_SDL()
 {
   
   SDL_Event event;
-  const SDL_Surface *screen = SDL_GetVideoSurface();
   Uint32 mouse_lastused = 0;
   SDL_ShowCursor(SDL_DISABLE);
- 
-  // Initialize the grid
-  renderer->resize(screen->w, screen->h);
+
+  // Initialize the grid, use the window size.
+  renderer->resize(-1, -1);
 
   while (loopvar) {
     Uint32 now = SDL_GetTicks();

@@ -211,8 +211,12 @@ public:
     return make_pair(w,h);
   }
 
-  
   void resize(int w, int h) {
+    if (w < 0 || h < 0) {
+      SDL_GetWindowSize(window, &w, &h);
+    }
+    if (w == window_w && h == window_h) return;
+
     // We've gotten resized.. first step is to reinitialize video
     cout << "New window size: " << w << "x" << h << endl;
     init_video(w, h);
