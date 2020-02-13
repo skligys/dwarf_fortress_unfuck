@@ -57,13 +57,14 @@ renderer_offscreen::renderer_offscreen(int grid_x, int grid_y) {
 
 // Slurp the entire gps content into the renderer at some given offset
 void renderer_offscreen::update_all(int offset_x, int offset_y) {
+  const Uint32 pixel_format = SDL_GetWindowPixelFormat(window);
   for (int x = 0; x < gps.dimx; x++) {
     for (int y = 0; y < gps.dimy; y++) {
       // Read tiles from gps, create cached texture
       Either<texture_fullid,texture_ttfid> id = screen_to_texid(x, y);
       SDL_Texture *tex = id.isL ?
         tile_cache_lookup(id.left, false) :
-        ttf_manager.get_texture(id.right);
+        ttf_manager.get_texture(id.right, pixel_format, renderer);
       if (id.isL) {
         tex = tile_cache_lookup(id.left);
       } else {

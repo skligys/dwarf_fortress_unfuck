@@ -121,7 +121,8 @@ public:
       // And blit.
       SDL_RenderCopy(renderer, tex, NULL, &dst);
     } else {  // TTF, cached in ttf_manager so no point in also caching here
-      tex = ttf_manager.get_texture(id.right);
+      const Uint32 pixel_format = SDL_GetWindowPixelFormat(window);
+      tex = ttf_manager.get_texture(id.right, pixel_format, renderer);
       // Blit later
       ttfs_to_render.push_back(make_pair(tex, dst));
     }
