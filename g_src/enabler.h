@@ -949,7 +949,7 @@ class enablerst : public enabler_inputst
   Chan<zoom_commands> async_zoom; // Zoom commands (from the simulation thread)
   Chan<void> async_fromcomplete;  // Barrier for async_msg requests that require acknowledgement
  public:
-  Uint32 renderer_threadid;
+  SDL_threadID renderer_threadid;
  private:
 
   void pause_async_loop();
