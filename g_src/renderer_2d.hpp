@@ -65,7 +65,7 @@ protected:
       SDL_UnlockSurface(tex);
       
       SDL_Surface *disp = convert ?
-        SDL_Resize(color, dispx_z, dispy_z) :  // Convert to display format; deletes color
+        SDL_Resize(window, color, dispx_z, dispy_z) :  // Convert to display format; deletes color
         color;  // color is not deleted, but we don't want it to be.
       SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, disp);
       SDL_FreeSurface(disp);

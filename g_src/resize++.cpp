@@ -205,7 +205,7 @@ static inline bool has_alpha(SDL_Surface * src)
     return is_alpha;
 }
 
-SDL_Surface* SDL_Resize(SDL_Surface *src, float factor, bool free, int filter)
+SDL_Surface* SDL_Resize(SDL_Window *window, SDL_Surface *src, float factor, bool free, int filter)
 {
     if (factor > 100.0f) factor = 100.0f; //let's be reasonable...
     int new_w = (int)(src->w * factor),
@@ -213,25 +213,20 @@ SDL_Surface* SDL_Resize(SDL_Surface *src, float factor, bool free, int filter)
     if (new_w < 1) new_w = 1;
     if (new_h < 1) new_h = 1;
 
-    return SDL_Resize(src, new_w, new_h, free, filter);
+    return SDL_Resize(window, src, new_w, new_h, free, filter);
 }
 
-SDL_Surface* SDL_Resize(SDL_Surface *src, int new_w, int new_h, bool free, int filter)
+SDL_Surface* SDL_Resize(SDL_Window *window, SDL_Surface *src, int new_w, int new_h, bool free, int filter)
 {
     SDL_Surface * dst;
-    bool is_alpha = has_alpha(src);    
+    // SK: How to handle alphs???
 
     if (src->w == new_w && src->h == new_h)
     {
         //No change in size. Return an optimized image.
-        if (is_alpha)
-        {
-            dst = SDL_DisplayFormatAlpha(src);
-            SDL_SetAlpha(src, SDL_SRCALPHA, 0);
-        }
-        else        
-            dst = SDL_DisplayFormat(src);            
-        
+        const Uint32 format = SDL_GetWindowPixelFormat(window);
+        dst = SDL_ConvertSurfaceFormat(src, format, 0);
+
         if (free)
             SDL_FreeSurface(src);
         return dst;
@@ -257,14 +252,9 @@ SDL_Surface* SDL_Resize(SDL_Surface *src, int new_w, int new_h, bool free, int f
     Resample(src,dst,filter);
 
     SDL_FreeSurface(temp);
-    if (is_alpha)
-        {
-            temp = SDL_DisplayFormatAlpha(dst);
-            SDL_SetAlpha(temp, SDL_SRCALPHA, 0);
-        }
-        else        
-            temp = SDL_DisplayFormat(dst);            
-        
+    const Uint32 format = SDL_GetWindowPixelFormat(window);
+    temp = SDL_ConvertSurfaceFormat(dst, format, 0);
+
     SDL_FreeSurface(dst);
     return temp;
 }
