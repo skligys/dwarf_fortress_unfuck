@@ -9,11 +9,11 @@
 
   If scale_factor > 1.0 image will be enlarged, < 1.0 will shrink the image
 
-  All scaling operations will return an image that has been optimized(using
-  SDL_DisplayFormat or SDL_DisplayFormatAlpha, as appropriate) for the
-  current screen mode (Even images that were not resized will return an
-  optimized surface pointer, i.e. scale_factor = 1.0). The SDL_SRCALPHA flag
-  is also set for the returned image, if appropriate.
+  All scaling operations will return an image that has been optimized (using
+  SDL_GetWindowPixelFormat) for the current window (Even images that were
+  not resized will return an optimized surface pointer, i.e.
+  scale_factor = 1.0). The SDL_SRCALPHA flag is also set for the returned image,
+  if appropriate.
 
   The option to free or not free the source image is given, so that if you 
   desire to make multiple copies of a source image at various sizes, 
@@ -48,8 +48,8 @@
     or
 
         SDL_Surface *image = SDL_LoadBMP("myimage.bmp");
-        SDL_Surface *small_image = SDL_Resize(image,0.5f,false); //shrink to 50% size
-        SDL_Surface *big_image = SDL_Resize(image,2.0f,false); //enlarge to 200% size
+        SDL_Surface *small_image = SDL_Resize(window,image,0.5f,false); //shrink to 50% size
+        SDL_Surface *big_image = SDL_Resize(window,image,2.0f,false); //enlarge to 200% size
         //image still points to the original loaded surface.
 
     If you have any questions or comments, feel free to contact me(David Olsen) at:
@@ -62,7 +62,7 @@
 
 #include <SDL2/SDL.h>
 
-SDL_Surface * SDL_Resize(SDL_Surface *src, float scale_factor,   bool free_src = true, int filter = 4);
-SDL_Surface * SDL_Resize(SDL_Surface *src, int new_w, int new_h, bool free_src = true, int filter = 4);
+SDL_Surface * SDL_Resize(SDL_Window *window, SDL_Surface *src, float scale_factor,   bool free_src = true, int filter = 4);
+SDL_Surface * SDL_Resize(SDL_Window *window, SDL_Surface *src, int new_w, int new_h, bool free_src = true, int filter = 4);
 
 #endif
