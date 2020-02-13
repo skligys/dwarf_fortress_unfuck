@@ -4,49 +4,97 @@ public:
   virtual bool uses_opengl() { return true; }
   
 protected:
-  SDL_Surface *screen;
+  SDL_Window *window = NULL;
+  SDL_Renderer *renderer = NULL;
+  SDL_GLContext gl_context = NULL;
 
   int dispx, dispy; // Cache of the current font size
   
   bool init_video(int w, int h) {
-    // Get ourselves an opengl-enabled SDL window
-    Uint32 flags = SDL_HWSURFACE | SDL_OPENGL;
+    {
+      // SK: Debug.
+      std::stringstream ss;
+      ss << ">>>>> renderer_opengl::init_video(w: " << w << ", h: " << h << ")";
+      gamelog_string(ss.str());
+    }
 
-    // Set it up for windowed or fullscreen, depending.
-    if (enabler.is_fullscreen()) { 
-      flags |= SDL_FULLSCREEN;
+    if (!window || !renderer) {
+      // Get ourselves an opengl-enabled SDL window
+      Uint32 flags = SDL_WINDOW_OPENGL;
+
+      // Set it up for windowed or fullscreen, depending.
+      if (enabler.is_fullscreen()) {
+        flags |= SDL_WINDOW_FULLSCREEN;
+      } else {
+        if (!init.display.flag.has_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE))
+          flags |= SDL_WINDOW_RESIZABLE;
+      }
+
+      // (Re)create the window
+      int rc = SDL_CreateWindowAndRenderer(w, h, flags, &window, &renderer);
+      bool success = rc == 0 && window != NULL && renderer != NULL;
+      if (!success) {
+        cout << "SDL_CreateWindowAndRenderer FAILED! " << SDL_GetError() << endl;
+        return false;
+      }
     } else {
-      if (!init.display.flag.has_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE))
-        flags |= SDL_RESIZABLE;
+      int rc = SDL_SetWindowFullscreen(window, enabler.is_fullscreen() ? SDL_WINDOW_FULLSCREEN : 0);
+      if (rc != 0) {
+        cout << "SDL_SetWindowFullscreen FAILED! " << SDL_GetError() << endl;
+        return false;
+      }
     }
 
-    // Setup OpenGL attributes
-    SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, init.window.flag.has_flag(INIT_WINDOW_FLAG_VSYNC_ON));
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,
-                        init.display.flag.has_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER) ? 0 : 1);
+    if (!gl_context) {
+      gl_context = SDL_GL_CreateContext(window);
+      if (gl_context == NULL) {
+        cout << "SDL_GL_CreateContext FAILED! " << SDL_GetError() << endl;
+        return false;
+      }
 
-    // (Re)create the window
-    screen = SDL_SetVideoMode(w, h, 32, flags);
+      if (init.window.flag.has_flag(INIT_WINDOW_FLAG_VSYNC_ON)) {
+        // Try addaptive vsync, fall back to regular vsync.
+        int rc = SDL_GL_SetSwapInterval(-1);
+        if (rc != 0) {
+          rc = SDL_GL_SetSwapInterval(1);
+          if (rc != 0) {
+            cout << "SDL_GL_SetSwapInterval FAILED! " << SDL_GetError() << endl;
+            return false;
+          }
+        }
+      }
 
-    if (!screen) return false;
+      // SDL 2 always double-buffers automatically.
+      // Test double-buffering status
+      int test;
+      SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &test);
+      if (test != ((init.display.flag.has_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER)) ? 0 : 1)) {
+        if (enabler.is_fullscreen());
+          //errorlog << "Requested single-buffering not available\n" << flush;
+        else
+          report_error("OpenGL", "Requested single-buffering not available");
+      }
 
-    // Test double-buffering status
-    int test;
-    SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &test);
-    if (test != ((init.display.flag.has_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER)) ? 0 : 1)) {
-      if (enabler.is_fullscreen());
-        //errorlog << "Requested single-buffering not available\n" << flush;
-      else
-        report_error("OpenGL", "Requested single-buffering not available");
+      // (Re)initialize GLEW. Technically only needs to be done once on
+      // linux, but on windows forgetting will cause crashes.
+      glewInit();
     }
-
-    // (Re)initialize GLEW. Technically only needs to be done once on
-    // linux, but on windows forgetting will cause crashes.
-    glewInit();
 
     // Set the viewport and clear
-    glViewport(0, 0, screen->w, screen->h);
+    int gl_w, gl_h;
+    SDL_GL_GetDrawableSize(window, &gl_w, &gl_h);
+    glViewport(0, 0, gl_w, gl_h);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    {
+      // SK: Debug.
+      std::stringstream ss;
+      ss << "----- renderer_opengl::init_video(), GL drawable w: " << gl_w << ", h: " << gl_h;
+      gamelog_string(ss.str());
+    }
+
+    // SK: Debug.
+    gamelog_string("<<<<< renderer_opengl::init_video()");
 
     return true;
   }
@@ -172,7 +220,7 @@ public:
       assert(enabler.sync == NULL);
       enabler.sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     }
-    SDL_GL_SwapBuffers();
+    SDL_GL_SwapWindow(window);
   }
 
   renderer_opengl() {
@@ -185,10 +233,10 @@ public:
     zoom_steps = forced_steps = 0;
     
     // Set window title/icon.
-    SDL_WM_SetCaption(GAME_TITLE_STRING, NULL);
+    SDL_SetWindowTitle(window, GAME_TITLE_STRING);
     SDL_Surface *icon = IMG_Load("data/art/icon.png");
     if (icon != NULL) {
-      SDL_WM_SetIcon(icon, NULL);
+      SDL_SetWindowIcon(window, icon);
       // The icon's surface doesn't get used past this point.
       SDL_FreeSurface(icon); 
     }
@@ -196,9 +244,10 @@ public:
     // Find the current desktop resolution if fullscreen resolution is auto
     if (init.display.desired_fullscreen_width  == 0 ||
         init.display.desired_fullscreen_height == 0) {
-      const struct SDL_VideoInfo *info = SDL_GetVideoInfo();
-      init.display.desired_fullscreen_width = info->current_w;
-      init.display.desired_fullscreen_height = info->current_h;
+      SDL_DisplayMode mode;
+      SDL_GetDisplayMode(0, 0, &mode);
+      init.display.desired_fullscreen_width = mode.w;
+      init.display.desired_fullscreen_height = mode.h;
     }
 
     // Initialize our window
@@ -227,10 +276,25 @@ public:
   }
 
   virtual ~renderer_opengl() {
+    // SK: Debug.
+    gamelog_string(">>>>> renderer_opengl::~renderer_opengl()");
+
     free(vertexes);
     free(fg);
     free(bg);
     free(tex);
+    if (gl_context) SDL_GL_DeleteContext(gl_context);
+    if (renderer) {
+      SDL_DestroyRenderer(renderer);
+      renderer = NULL;
+    }
+    if (window) {
+      SDL_DestroyWindow(window);
+      window = NULL;
+    }
+
+    // SK: Debug.
+    gamelog_string("<<<<< renderer_opengl::~renderer_opengl()");
   }
 
   int zoom_steps, forced_steps;
@@ -326,17 +390,19 @@ public:
     // Setup invariant state
     glEnableClientState(GL_COLOR_ARRAY);
     /// Set up our coordinate system
+    int gl_w, gl_h;
+    SDL_GL_GetDrawableSize(window, &gl_w, &gl_h);
     if (forced_steps + zoom_steps == 0 &&
         init.display.flag.has_flag(INIT_DISPLAY_FLAG_BLACK_SPACE)) {
       size_x = gps.dimx * dispx;
       size_y = gps.dimy * dispy;
-      off_x = (screen->w - size_x) / 2;
-      off_y = (screen->h - size_y) / 2;
+      off_x = (gl_w - size_x) / 2;
+      off_y = (gl_h - size_y) / 2;
     } else {
       // If we're zooming (or just not using black space), we use the
       // entire window.
-      size_x = screen->w;
-      size_y = screen->h;
+      size_x = gl_w;
+      size_y = gl_h;
       off_x = off_y = 0;
     }
     glViewport(off_x, off_y, size_x, size_y);
@@ -380,8 +446,10 @@ public:
 public:
   void set_fullscreen() {
     if (enabler.is_fullscreen()) {
-      init.display.desired_windowed_width = screen->w;
-      init.display.desired_windowed_height = screen->h;
+      int gl_w, gl_h;
+      SDL_GL_GetDrawableSize(window, &gl_w, &gl_h);
+      init.display.desired_windowed_width = gl_w;
+      init.display.desired_windowed_height = gl_h;
       resize(init.display.desired_fullscreen_width,
              init.display.desired_fullscreen_height);
     } else {
@@ -456,17 +524,19 @@ class renderer_partial : public renderer_opengl {
     // Setup invariant state
     glEnableClientState(GL_COLOR_ARRAY);
     /// Set up our coordinate system
+    int gl_w, gl_h;
+    SDL_GL_GetDrawableSize(window, &gl_w, &gl_h);
     if (forced_steps + zoom_steps == 0 &&
         init.display.flag.has_flag(INIT_DISPLAY_FLAG_BLACK_SPACE)) {
       size_x = gps.dimx * dispx;
       size_y = gps.dimy * dispy;
-      off_x = (screen->w - size_x) / 2;
-      off_y = (screen->h - size_y) / 2;
+      off_x = (gl_w - size_x) / 2;
+      off_y = (gl_h - size_y) / 2;
     } else {
       // If we're zooming (or just not using black space), we use the
       // entire window.
-      size_x = screen->w;
-      size_y = screen->h;
+      size_x = gl_w;
+      size_y = gl_h;
       off_x = off_y = 0;
     }
     glViewport(off_x, off_y, size_x, size_y);
@@ -553,8 +623,10 @@ class renderer_framebuffer : public renderer_once {
     // Allocate FBO texture memory
     glGenTextures(1, &fb_texture);
     glBindTexture(GL_TEXTURE_2D, fb_texture);
+    int gl_w, gl_h;
+    SDL_GL_GetDrawableSize(window, &gl_w, &gl_h);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 screen->w, screen->h,
+                 gl_w, gl_h,
                  0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
@@ -581,8 +653,10 @@ class renderer_framebuffer : public renderer_once {
     // Draw the framebuffer to screen
     glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
     glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, framebuffer);
-    glBlitFramebufferEXT(0,0, screen->w, screen->h,
-                         0,0, screen->w, screen->h,
+    int gl_w, gl_h;
+    SDL_GL_GetDrawableSize(window, &gl_w, &gl_h);
+    glBlitFramebufferEXT(0,0, gl_w, gl_h,
+                         0,0, gl_w, gl_h,
                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
     printGLError();
   }

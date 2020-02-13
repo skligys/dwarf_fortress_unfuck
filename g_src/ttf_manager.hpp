@@ -54,7 +54,7 @@ class ttf_managerst {
   double tab_width;
   int em_width;
   unordered_map<handleid, ttf_details> handles;
-  unordered_map<int, SDL_Surface*> textures;
+  unordered_map<int, SDL_Texture*> textures;
   struct todum {
     int handle;
     list<ttf_id> text;
@@ -73,7 +73,7 @@ public:
   }
   ~ttf_managerst() {
 	for (auto it = textures.cbegin(); it != textures.cend(); ++it)
-		SDL_FreeSurface(it->second);
+		SDL_DestroyTexture(it->second);
     if (font) TTF_CloseFont(font);
   }
   bool init(int ceiling, int tile_width);
@@ -83,7 +83,7 @@ public:
   ttf_details get_handle(const list<ttf_id> &text, justification just);
   // Returns rendered text. Renders too, if necessary.
   // The returned SDL_Surface is owned by the ttf_managerst.
-  SDL_Surface *get_texture(int handle);
+  SDL_Texture *get_texture(int handle);
   // Garbage-collect ttf surfaces
   void gc();
   // Set tab-stop width (in ems, i.e. tile widths)
