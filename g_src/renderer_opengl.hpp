@@ -184,8 +184,6 @@ public:
     tex      = NULL;
     zoom_steps = forced_steps = 0;
     
-    // Disable key repeat
-    SDL_EnableKeyRepeat(0, 0);
     // Set window title/icon.
     SDL_WM_SetCaption(GAME_TITLE_STRING, NULL);
     SDL_Surface *icon = IMG_Load("data/art/icon.png");

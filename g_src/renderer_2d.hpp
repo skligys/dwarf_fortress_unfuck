@@ -300,8 +300,6 @@ private:
 class renderer_2d : public renderer_2d_base {
 public:
   renderer_2d() {
-    // Disable key repeat
-    SDL_EnableKeyRepeat(0, 0);
     // Set window title/icon.
     SDL_WM_SetCaption(GAME_TITLE_STRING, NULL);
     SDL_Surface *icon = IMG_Load("data/art/icon.png");

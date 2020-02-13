@@ -25,7 +25,7 @@ struct Event {
   InterfaceKey k;
   int repeats;  // Starts at 0, increments once per repeat
   int serial;
-  int time;
+  Time time;
   int tick;  // The sim-tick at which we last returned this event
   bool macro;  // Created as part of macro playback.
 
@@ -92,7 +92,7 @@ static string interfacefile;
 
 
 // Returns an unused serial number
-static Time next_serial() {
+static int next_serial() {
   return ++last_serial;
 }
 
@@ -506,17 +506,12 @@ void enabler_inputst::add_input(SDL_Event &e, Uint32 now) {
       synthetics.push_back(make_pair(real, serial));
     }
     if (e.type == SDL_KEYUP || e.type == SDL_KEYDOWN) {
-      real.match.type = type_key;
-      real.match.scancode = e.key.keysym.scancode;
-      real.match.key = e.key.keysym.sym;
-      synthetics.push_back(make_pair(real, serial));
-    }
-    if (e.type == SDL_KEYDOWN && e.key.keysym.unicode && getModState() < 2) {
-      real.match.mod = KMOD_NONE;
-      real.match.type = type_unicode;
-      real.match.scancode = e.key.keysym.scancode;
-      real.match.unicode = e.key.keysym.unicode;
-      synthetics.push_back(make_pair(real, serial));
+      if (e.key.repeat == 0) {  // Filter out repeated keys.
+        real.match.type = type_key;
+        real.match.scancode = e.key.keysym.scancode;
+        real.match.key = e.key.keysym.sym;
+        synthetics.push_back(make_pair(real, serial));
+      }
     }
     if (e.type == SDL_QUIT) {
       // This one, we insert directly into the timeline.
@@ -644,6 +639,10 @@ void enabler_inputst::add_input_ncurses(int key, Time now, bool esc) {
   }
 }
 #endif
+
+void enabler_inputst::add_input_refined(KeyEvent &e, Uint32 now) {
+  add_input_refined(e, now, next_serial());
+}
 
 void enabler_inputst::add_input_refined(KeyEvent &e, Uint32 now, int serial) {
   // We may be registering a new mapping, in which case we skip the

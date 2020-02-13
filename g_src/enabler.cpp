@@ -452,6 +452,26 @@ void enablerst::eventLoop_SDL()
       case SDL_QUIT:
         enabler.add_input(event, now);
         break;
+      case SDL_TEXTINPUT: {
+          const char *s_utf8 = event.text.text;
+          for (const char *p = s_utf8; *p; ) {
+            int char_len = decode_utf8_predict_length(*p);
+            int ch = decode_utf8(p);
+            if (ch > 0 && ch <= 255) {
+              KeyEvent e;
+              e.release = false;
+              e.match.type = type_unicode;
+              e.match.mod = KMOD_NONE;
+              e.match.scancode = 0;
+              e.match.unicode = (Uint16) ch;
+              enabler.add_input_refined(e, now);
+              e.release = true;
+              enabler.add_input_refined(e, now);
+            }
+            p += char_len;
+          }
+        }
+        break;
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP:
         if (!init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_OFF)) {
@@ -582,7 +602,6 @@ int enablerst::loop(string cmdline) {
     eventLoop_ncurses();
 #endif
   } else {
-    SDL_EnableUNICODE(1);
     eventLoop_SDL();
   }
 
