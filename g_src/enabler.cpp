@@ -526,8 +526,7 @@ void enablerst::eventLoop_SDL()
     if (!init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_OFF)) {
       int mouse_x = -1, mouse_y = -1, mouse_state;
       // Check whether the renderer considers this valid input or not, and write it to gps
-      if ((SDL_GetAppState() & SDL_APPMOUSEFOCUS) &&
-          renderer->get_mouse_coords(mouse_x, mouse_y)) {
+      if (renderer->get_mouse_coords(mouse_x, mouse_y)) {
         mouse_state = 1;
       } else {
         mouse_state = 0;

@@ -366,8 +366,11 @@ public:
   }
 
   int off_x, off_y, size_x, size_y;
-  
+
   bool get_mouse_coords(int &x, int &y) {
+    bool has_mouse_focus = (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS) != 0;
+    if (!has_mouse_focus) return false;
+
     int mouse_x, mouse_y;
     SDL_GetMouseState(&mouse_x, &mouse_y);
     mouse_x -= off_x; mouse_y -= off_y;
