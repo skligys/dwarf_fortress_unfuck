@@ -83,7 +83,7 @@ public:
   ttf_details get_handle(const list<ttf_id> &text, justification just);
   // Returns rendered text. Renders too, if necessary.
   // The returned SDL_Surface is owned by the ttf_managerst.
-  SDL_Texture *get_texture(int handle);
+  SDL_Texture *get_texture(int handle, Uint32 pixel_format, SDL_Renderer *renderer);
   // Garbage-collect ttf surfaces
   void gc();
   // Set tab-stop width (in ems, i.e. tile widths)

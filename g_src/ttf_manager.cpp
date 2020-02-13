@@ -146,7 +146,7 @@ ttf_details ttf_managerst::get_handle(const list<ttf_id> &text, justification ju
   return ret;
 }
 
-SDL_Texture *ttf_managerst::get_texture(int handle) {
+SDL_Texture *ttf_managerst::get_texture(int handle, Uint32 pixel_format, SDL_Renderer *renderer) {
   // Run any outstanding renders
   if (!todo.empty()) {
     vector<Uint16> text_unicode;
@@ -217,7 +217,7 @@ SDL_Texture *ttf_managerst::get_texture(int handle) {
         SDL_FreeSurface(textimg_seg);
       }
       // ..and make the whole thing display format. Phew!
-      SDL_Surface *textimg_2 = SDL_DisplayFormat(textimg);
+      SDL_Surface *textimg_2 = SDL_ConvertSurfaceFormat(textimg, pixel_format, 0);
 #ifdef DEBUG
       // cout << "Rendering \"" << text.text << "\" at height " << box2->h << endl;
       // cout << " width " << textimg->w << " in box of " << box->w << endl;
