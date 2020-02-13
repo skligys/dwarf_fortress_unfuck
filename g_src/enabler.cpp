@@ -502,21 +502,21 @@ void enablerst::eventLoop_SDL()
         break;
       case SDL_WINDOWEVENT:
         enabler.clear_input();
-        if (event.window.event == SDL_WINDOWEVENT_RESTORED) {
-          enabler.flag|=ENABLERFLAG_RENDER;
-          gps.force_full_display_count++;
-        }
-        break;
-      case SDL_VIDEOEXPOSE:
-        gps.force_full_display_count++;
-        enabler.flag|=ENABLERFLAG_RENDER;
-        break;
-      case SDL_VIDEORESIZE:
-        if (is_fullscreen());
-          //errorlog << "Caught resize event in fullscreen??\n";
-        else {
-          //gamelog << "Resizing window to " << event.resize.w << "x" << event.resize.h << endl << flush;
-          renderer->resize(event.resize.w, event.resize.h);
+        switch (event.window.event) {
+          case SDL_WINDOWEVENT_RESTORED:
+          case SDL_WINDOWEVENT_EXPOSED:
+            gps.force_full_display_count++;
+            enabler.flag|=ENABLERFLAG_RENDER;
+            break;
+          case SDL_WINDOWEVENT_RESIZED:
+          case SDL_WINDOWEVENT_SIZE_CHANGED:
+            if (is_fullscreen());
+              //errorlog << "Caught resize event in fullscreen??\n";
+            else {
+              //gamelog << "Resizing window to " << event.window.data1 << "x" << event.window.data2 << endl << flush;
+              renderer->resize(event.window.data1, event.window.data2);
+            }
+            break;
         }
         break;
       } // switch (event.type)
@@ -606,6 +606,7 @@ int enablerst::loop(string cmdline) {
 
   // Clean up graphical resources
   delete renderer;
+  return 0;
 }
 
 void enablerst::override_grid_size(int x, int y) {
