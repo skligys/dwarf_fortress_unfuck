@@ -418,6 +418,13 @@ public:
 
   // Parameters: window size
   void resize(int w, int h) {
+    if (w < 0 || h < 0) {
+      SDL_GL_GetDrawableSize(window, &w, &h);
+    }
+    if (w == window_w && h == window_h) {
+      return;
+    }
+
     // (Re)calculate grid-size
     dispx = enabler.is_fullscreen() ?
       init.font.large_font_dispx :
