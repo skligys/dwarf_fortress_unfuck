@@ -742,6 +742,12 @@ int main (int argc, char* argv[]) {
     report_error("SDL initialization failure", SDL_GetError());
     return false;
   }
+  retval = IMG_Init(IMG_INIT_PNG);
+  // Report failure?
+  if (retval & IMG_INIT_PNG != IMG_INIT_PNG) {
+    report_error("SDL image library initialization failure", IMG_GetError());
+    return false;
+  }
   enabler.renderer_threadid = SDL_ThreadID();
 
   // Spawn simulation thread
@@ -811,6 +817,7 @@ int main (int argc, char* argv[]) {
   }
   int result = enabler.loop(cmdLine);
 
+  IMG_Quit();
   SDL_Quit();
 
 #ifdef WIN32
