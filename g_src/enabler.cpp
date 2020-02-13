@@ -500,13 +500,11 @@ void enablerst::eventLoop_SDL()
           SDL_ShowCursor(SDL_ENABLE);
         }
         break;
-      case SDL_ACTIVEEVENT:
+      case SDL_WINDOWEVENT:
         enabler.clear_input();
-        if (event.active.state & SDL_APPACTIVE) {
-          if (event.active.gain) {
-            enabler.flag|=ENABLERFLAG_RENDER;
-            gps.force_full_display_count++;
-          }
+        if (event.window.event == SDL_WINDOWEVENT_RESTORED) {
+          enabler.flag|=ENABLERFLAG_RENDER;
+          gps.force_full_display_count++;
         }
         break;
       case SDL_VIDEOEXPOSE:
