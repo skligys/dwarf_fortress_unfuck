@@ -1652,7 +1652,7 @@ enum InterfaceKeyType
 
 extern bimap<InterfaceKey,std::string> bindingNames;
 extern bimap<InterfaceKey,std::string> displayNames;
-extern bimap<SDLKey,std::string> sdlNames;
+extern bimap<SDL_Keycode,std::string> sdlNames;
 
 void keybinding_init();
 

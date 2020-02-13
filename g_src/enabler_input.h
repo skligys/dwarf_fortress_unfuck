@@ -41,7 +41,7 @@ struct EventMatch {
   Uint8 scancode; // not defined for type=button
   union {
     Uint16 unicode;
-    SDLKey key;
+    SDL_Keycode key;
     Uint8 button;
   };
   
