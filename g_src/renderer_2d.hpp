@@ -19,6 +19,7 @@ protected:
   int dispx_z, dispy_z;
   // Viewport origin
   int origin_x, origin_y;
+  int window_w = 0, window_h = 0;
 
   SDL_Texture *tile_cache_lookup(texture_fullid &id, bool convert=true) {
     map<texture_fullid, SDL_Texture*>::iterator it = tile_cache.find(id);
@@ -118,6 +119,7 @@ public:
     SDL_Texture *tex;
     if (id.isL) {      // Ordinary tile, cached here
       tex = tile_cache_lookup(id.left);
+      SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
       // And blit.
       SDL_RenderCopy(renderer, tex, NULL, &dst);
     } else {  // TTF, cached in ttf_manager so no point in also caching here
@@ -242,6 +244,9 @@ public:
     compute_forced_zoom();
     reshape(compute_zoom(true));
     cout << endl;
+
+    window_w = w;
+    window_h = h;
   }
 
   void reshape(pair<int,int> max_grid) {
