@@ -9,7 +9,8 @@ protected:
   SDL_GLContext gl_context = NULL;
 
   int dispx, dispy; // Cache of the current font size
-  
+  int window_w = 0, window_h = 0;
+
   bool init_video(int w, int h) {
     {
       // SK: Debug.
@@ -446,6 +447,9 @@ public:
     // Only reshape if we're free to pick grid size
     if (enabler.overridden_grid_sizes.size() == 0)
       reshape(compute_zoom());
+
+    window_w = w;
+    window_h = h;
   }
 
   // Parameters: grid size

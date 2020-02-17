@@ -508,7 +508,6 @@ void enablerst::eventLoop_SDL()
             enabler.flag|=ENABLERFLAG_RENDER;
             break;
           case SDL_WINDOWEVENT_RESIZED:
-          case SDL_WINDOWEVENT_SIZE_CHANGED:
             if (is_fullscreen());
               //errorlog << "Caught resize event in fullscreen??\n";
             else {
