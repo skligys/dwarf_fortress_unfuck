@@ -129,45 +129,9 @@ enablerst::enablerst() {
 
 void renderer::display()
 {
-  const int dimx = init.display.grid_x;
-  const int dimy = init.display.grid_y;
-  static bool use_graphics = init.display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS);
-  if (gps.force_full_display_count) {
-    // Update the entire screen
-    update_all();
-  } else {
-    Uint32 *screenp = (Uint32*)screen, *oldp = (Uint32*)screen_old;
-    if (use_graphics) {
-      int off = 0;
-      for (int x2=0; x2 < dimx; x2++) {
-        for (int y2=0; y2 < dimy; y2++, ++off, ++screenp, ++oldp) {
-          // We don't use pointers for the non-screen arrays because we mostly fail at the
-          // *first* comparison, and having pointers for the others would exceed register
-          // count.
-          // Partial printing (and color-conversion): Big-ass if.
-          if (*screenp == *oldp &&
-              screentexpos[off] == screentexpos_old[off] &&
-              screentexpos_addcolor[off] == screentexpos_addcolor_old[off] &&
-              screentexpos_grayscale[off] == screentexpos_grayscale_old[off] &&
-              screentexpos_cf[off] == screentexpos_cf_old[off] &&
-              screentexpos_cbr[off] == screentexpos_cbr_old[off])
-            {
-              // Nothing's changed, this clause deliberately empty
-            } else {
-            update_tile(x2, y2);
-          }
-        }
-      }
-    } else {
-      for (int x2=0; x2 < dimx; ++x2) {
-        for (int y2=0; y2 < dimy; ++y2, ++screenp, ++oldp) {
-          if (*screenp != *oldp) {
-            update_tile(x2, y2);
-          }
-        }
-      }
-    }
-  }
+  // As SDL2 suggests, always consider the backbuffer invalidated on each redraw.
+  update_all();
+
   if (gps.force_full_display_count > 0) gps.force_full_display_count--;
 }
 
