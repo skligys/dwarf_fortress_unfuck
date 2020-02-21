@@ -28,6 +28,9 @@ static void alPrintErrors_(const char* file, int line) {
 }
 
 bool musicsoundst::initsound() {
+  // SK: Disable OpenAL sound, crashes in release mode.
+  return false;
+
   if (functional) return true;
 
   // Load the libraries
