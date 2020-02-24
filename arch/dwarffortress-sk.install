@@ -1,0 +1,12 @@
+post_upgrade() {
+    echo "You might have delete your ~/.dwarffortress directory to get the new file layout."
+    echo "Of course, you can backup your saves."
+    echo "This might also be necessary if you have custom keybinds."
+
+    md5="$(md5sum /opt/dwarffortress-sk/libs/Dwarf_Fortress | cut -d ' ' -f 1)"
+    echo "IMPORTANT: Update the md5 hash for dfhack: $md5"
+}
+
+post_install() {
+    post_upgrade
+}
