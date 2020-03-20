@@ -1,9 +1,9 @@
 # Maintainer: Skirmantas Kligys <Skirmantas.Kligys@gmail.com>
 # Modified from: https://www.archlinux.org/packages/community/x86_64/dwarffortress/
 pkgname=dwarffortress-sk
-pkgver=0.47.03
-_pkgver=47_03
 _pkgname=dwarffortress
+pkgver=0.47.04
+_pkgver=47_04
 pkgrel=1
 pkgdesc="A single-player fantasy game in which you build a dwarven outpost or play an adventurer in a randomly generated world"
 arch=(x86_64)
@@ -28,7 +28,7 @@ sha256sums=('SKIP'
             'eeb579e38a999cb171366137fe38b5cff8cd60f60d526dc25eed3e8e5058159d'
             '17cbc5699d7b1f6c2c4ec5d8b53eb945c9936845c516f81b7a1db22fd3276b3c'
             '83183abc70b11944720b0d86f4efd07468f786b03fa52fe429ca8e371f708e0f'
-            '1a33a1be06f6cdd08f94e39c4433ab35dc8ad0a7e319e8d19436f7d473ed785e')
+            '1de5872bf3ac32906a0082129ec88d6879b6ac7059a3513607d628090b1328e6')
 conflicts=(dwarffortress dwarffortress-obsidian dwarffortress-ironhand dwarffortress-phoebus dwarffortress-spacefox)
 provides=("dwarffortress=$pkgver")
 
