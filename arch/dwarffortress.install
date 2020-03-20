@@ -3,7 +3,7 @@ post_upgrade() {
     echo "Of course, you can backup your saves."
     echo "This might also be necessary if you have custom keybinds."
 
-    md5="$(md5sum /opt/dwarffortress-sk/libs/Dwarf_Fortress | cut -d ' ' -f 1)"
+    md5="$(md5sum /opt/dwarffortress/libs/Dwarf_Fortress | cut -d ' ' -f 1)"
     echo "IMPORTANT: Update the md5 hash for dfhack: $md5"
 }
 

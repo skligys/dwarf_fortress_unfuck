@@ -3,6 +3,7 @@
 pkgname=dwarffortress-sk
 pkgver=0.47.03
 _pkgver=47_03
+_pkgname=dwarffortress
 pkgrel=1
 pkgdesc="A single-player fantasy game in which you build a dwarven outpost or play an adventurer in a randomly generated world"
 arch=(x86_64)
@@ -14,22 +15,22 @@ optdepends=('nvidia-utils: If you have nvidia graphics'
             'alsa-lib: for alsa sound'
             'libpulse: for pulse sound')
 options=('!strip' '!buildflags')
-install=${pkgname}.install
+install=${_pkgname}.install
 # I made a fucking github repo with the sole purpose of unfucking df a bit
 # We try to compile whatever little bit of df is open source
 # To use local git repository: git+file:///home/skirmis/Work/DwarfFortressSdl2/dwarf_fortress_unfuck
 source=(git://github.com/skligys/dwarf_fortress_unfuck.git#tag=${pkgver}
-        dwarffortress-sk
-        dwarffortress-sk.desktop
-        dwarffortress-sk.png
+        dwarffortress
+        dwarffortress.desktop
+        dwarffortress.png
         http://www.bay12games.com/dwarves/df_${_pkgver}_linux.tar.bz2)
 sha256sums=('SKIP'
-            '9943af0230d1f83865669909fd5e352439939ce88d3a46faa7ecf88bff5de418'
-            'd7c616bec37beb45369d1e356384de5279e93ad92984ebec18598196fafe5c62'
+            'eeb579e38a999cb171366137fe38b5cff8cd60f60d526dc25eed3e8e5058159d'
+            '17cbc5699d7b1f6c2c4ec5d8b53eb945c9936845c516f81b7a1db22fd3276b3c'
             '83183abc70b11944720b0d86f4efd07468f786b03fa52fe429ca8e371f708e0f'
             '1a33a1be06f6cdd08f94e39c4433ab35dc8ad0a7e319e8d19436f7d473ed785e')
-# conflicts=(dwarffortress)
-# provides=("dwarffortress=$pkgver")
+conflicts=(dwarffortress dwarffortress-obsidian dwarffortress-ironhand dwarffortress-phoebus dwarffortress-spacefox)
+provides=("dwarffortress=$pkgver")
 
 build() {
   cd dwarf_fortress_unfuck
@@ -40,29 +41,27 @@ build() {
 
 package() {
   install -dm755 "$pkgdir"/opt/
-  cp -r "$srcdir"/df_linux "$pkgdir"/opt/$pkgname
-  rm -r "$pkgdir"/opt/$pkgname/df "$pkgdir"/opt/$pkgname/libs/* "$pkgdir"/opt/$pkgname/g_src
+  cp -r "$srcdir"/df_linux "$pkgdir"/opt/$_pkgname
+  rm -r "$pkgdir"/opt/$_pkgname/df "$pkgdir"/opt/$_pkgname/libs/* "$pkgdir"/opt/$_pkgname/g_src
 
-  find "$pkgdir"/opt/$pkgname -type d -exec chmod 755 {} +
-  find "$pkgdir"/opt/$pkgname -type f -exec chmod 644 {} +
+  find "$pkgdir"/opt/$_pkgname -type d -exec chmod 755 {} +
+  find "$pkgdir"/opt/$_pkgname -type f -exec chmod 644 {} +
 
   patchelf --remove-needed libSDL-1.2.so.0 "$srcdir"/df_linux/libs/Dwarf_Fortress
-  install -Dm755 "$srcdir"/df_linux/libs/Dwarf_Fortress "$pkgdir"/opt/$pkgname/libs/Dwarf_Fortress
-  install -Dm755 "$srcdir"/dwarf_fortress_unfuck/libgraphics.so "$pkgdir"/opt/$pkgname/libs/libgraphics.so
-  install -Dm755 "$srcdir"/dwarffortress-sk "$pkgdir"/usr/bin/$pkgname
+  install -Dm755 "$srcdir"/df_linux/libs/Dwarf_Fortress "$pkgdir"/opt/$_pkgname/libs/Dwarf_Fortress
+  install -Dm755 "$srcdir"/dwarf_fortress_unfuck/libgraphics.so "$pkgdir"/opt/$_pkgname/libs/libgraphics.so
+  install -Dm755 "$srcdir"/dwarffortress "$pkgdir"/usr/bin/$_pkgname
 
   # No idea why we need this. Really. This isn't being loaded dynamically, it's not linked and
   # in general there is no indication this is being used. However, it doesn't work without this symlink.
-  ln -s /usr/lib/libpng.so "$pkgdir"/opt/$pkgname/libs/libpng.so.3
+  ln -s /usr/lib/libpng.so "$pkgdir"/opt/$_pkgname/libs/libpng.so.3
 
   # Set pkgname in runscript
-  sed -i "s/^pkgname=.*/pkgname=$pkgname/" "$pkgdir"/usr/bin/$pkgname
+  sed -i "s/^pkgname=.*/pkgname=$_pkgname/" "$pkgdir"/usr/bin/$_pkgname
 
   # Desktop launcher with icon
-  install -Dm644 "$srcdir"/dwarffortress-sk.desktop "$pkgdir"/usr/share/applications/"$pkgname".desktop
-  install -Dm644 "$srcdir"/dwarffortress-sk.png     "$pkgdir"/usr/share/pixmaps/"$pkgname".png
+  install -Dm644 "$srcdir"/dwarffortress.desktop "$pkgdir"/usr/share/applications/"$_pkgname".desktop
+  install -Dm644 "$srcdir"/dwarffortress.png     "$pkgdir"/usr/share/pixmaps/"$_pkgname".png
 
-  install -Dm644 "$srcdir"/df_linux/readme.txt "$pkgdir"/usr/share/licenses/$pkgname/readme.txt
+  install -Dm644 "$srcdir"/df_linux/readme.txt "$pkgdir"/usr/share/licenses/$_pkgname/readme.txt
 }
-
-# vim:set ts=2 sw=2 et:
