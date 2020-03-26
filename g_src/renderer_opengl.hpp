@@ -15,14 +15,20 @@ protected:
     {
       // SK: Debug.
       std::stringstream ss;
-      ss << ">>>>> renderer_opengl::init_video(w: " << w << ", h: " << h << ")";
+      ss << "----- renderer_opengl::init_video(w: " << w << ", h: " << h << ")";
       gamelog_string(ss.str());
     }
 
     if (!window || !renderer) {
+      // Set unchangeable state for the next GL context.
+      int rc = SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+      if (rc != 0) {
+        cout << "SDL_GL_SetAttribute FAILED! " << SDL_GetError() << endl;
+        return false;
+      }
+
       // Get ourselves an opengl-enabled SDL window
       Uint32 flags = SDL_WINDOW_OPENGL;
-
       // Set it up for windowed or fullscreen, depending.
       if (enabler.is_fullscreen()) {
         flags |= SDL_WINDOW_FULLSCREEN;
@@ -32,7 +38,7 @@ protected:
       }
 
       // (Re)create the window
-      int rc = SDL_CreateWindowAndRenderer(w, h, flags, &window, &renderer);
+      rc = SDL_CreateWindowAndRenderer(w, h, flags, &window, &renderer);
       bool success = rc == 0 && window != NULL && renderer != NULL;
       if (!success) {
         cout << "SDL_CreateWindowAndRenderer FAILED! " << SDL_GetError() << endl;
@@ -56,24 +62,27 @@ protected:
       if (init.window.flag.has_flag(INIT_WINDOW_FLAG_VSYNC_ON)) {
         // Try addaptive vsync, fall back to regular vsync.
         int rc = SDL_GL_SetSwapInterval(-1);
-        if (rc != 0) {
+        if (rc == 0) {
+          gamelog_string("-----   set adaptive vsync");
+        } else {
           rc = SDL_GL_SetSwapInterval(1);
-          if (rc != 0) {
+          if (rc == 0) {
+            gamelog_string("-----   set fixed vsync");
+          } else {
             cout << "SDL_GL_SetSwapInterval FAILED! " << SDL_GetError() << endl;
             return false;
           }
         }
       }
+      if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_ARB_SYNC) && GL_ARB_sync) {
+        gamelog_string("-----   ARB_sync is enabled");
+      }
 
-      // SDL 2 always double-buffers automatically.
       // Test double-buffering status
       int test;
       SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &test);
       if (test != ((init.display.flag.has_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER)) ? 0 : 1)) {
-        if (enabler.is_fullscreen());
-          //errorlog << "Requested single-buffering not available\n" << flush;
-        else
-          report_error("OpenGL", "Requested single-buffering not available");
+        report_error("OpenGL", "Requested double-buffering not available");
       }
 
       // (Re)initialize GLEW. Technically only needs to be done once on
@@ -86,16 +95,6 @@ protected:
     SDL_GL_GetDrawableSize(window, &gl_w, &gl_h);
     glViewport(0, 0, gl_w, gl_h);
     glClear(GL_COLOR_BUFFER_BIT);
-
-    {
-      // SK: Debug.
-      std::stringstream ss;
-      ss << "----- renderer_opengl::init_video(), GL drawable w: " << gl_w << ", h: " << gl_h;
-      gamelog_string(ss.str());
-    }
-
-    // SK: Debug.
-    gamelog_string("<<<<< renderer_opengl::init_video()");
 
     return true;
   }
@@ -278,7 +277,7 @@ public:
 
   virtual ~renderer_opengl() {
     // SK: Debug.
-    gamelog_string(">>>>> renderer_opengl::~renderer_opengl()");
+    gamelog_string("----- renderer_opengl::~renderer_opengl()");
 
     free(vertexes);
     free(fg);
@@ -293,9 +292,6 @@ public:
       SDL_DestroyWindow(window);
       window = NULL;
     }
-
-    // SK: Debug.
-    gamelog_string("<<<<< renderer_opengl::~renderer_opengl()");
   }
 
   int zoom_steps, forced_steps;
